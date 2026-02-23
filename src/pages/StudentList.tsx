@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Search } from "lucide-react";
+import { Users, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 
 interface Student {
   id: string;
@@ -26,6 +29,16 @@ const StudentList = () => {
     const { data, error } = await supabase.from("students").select("*").order("created_at", { ascending: false });
     if (!error && data) setStudents(data as Student[]);
     setLoading(false);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    const { error } = await supabase.from("students").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete student", variant: "destructive" });
+    } else {
+      toast({ title: "Deleted", description: `${name} has been removed` });
+      setStudents((prev) => prev.filter((s) => s.id !== id));
+    }
   };
 
   const filtered = students.filter((s) =>
@@ -72,6 +85,7 @@ const StudentList = () => {
                 <TableHead className="text-muted-foreground">Email</TableHead>
                 <TableHead className="text-muted-foreground">Level</TableHead>
                 <TableHead className="text-muted-foreground">Registered</TableHead>
+                <TableHead className="text-muted-foreground text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -88,6 +102,25 @@ const StudentList = () => {
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {new Date(student.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-background border-border">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Student</AlertDialogTitle>
+                          <AlertDialogDescription>Are you sure you want to delete <strong>{student.name}</strong>? This action cannot be undone.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleDelete(student.id, student.name)}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}
